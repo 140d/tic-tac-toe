@@ -1,1 +1,1 @@
-This reprository will contain artificial intelligence that will develop itself in the game of tic-tac-toe.
+This reprository will contain reinforcement learning model which will develop itself in the game of tic-tac-toe.
