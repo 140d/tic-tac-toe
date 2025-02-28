@@ -1,1 +1,1 @@
-This reprository will contain reinforcement learning model which will develop itself in the game of tic-tac-toe using Q-Learning.
+This reprository will contain bot which will be able to play tic-tac-toe and never lose.
