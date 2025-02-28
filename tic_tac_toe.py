@@ -1,287 +1,154 @@
 import random
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
-# TicTacToe Class - Game Environment
 class TicTacToe:
     def __init__(self):
-        self.board = [[" "]*3 for _ in range(3)]
+        # Initialize the game board as a 3x3 grid with empty spaces
+        self.board = [[" "] * 3 for _ in range(3)]
+        # Start with player "X"
         self.current_player = "X"
 
     def print_board(self):
-        print("\n".join(["|" + "|".join(row) + "|" for row in self.board]))
-        print("-" * 9)
-
-    def reset(self):
-        """Resets the game board."""
-        self.board = [[" "]*3 for _ in range(3)]
-        self.current_player = "X"
+        # Print the column numbers at the top
+        print("  0 1 2")
+        # Loop through each row and print the row number followed by the row content
+        for i, row in enumerate(self.board):
+            print(f"{i} " + "|".join(row))
 
     def is_valid_move(self, row, col):
+        # Check if the specified cell is empty
         return self.board[row][col] == " "
 
     def make_move(self, row, col):
+        # If the move is valid, place the current player's symbol on the board
         if self.is_valid_move(row, col):
             self.board[row][col] = self.current_player
+            # Switch the current player to the other player
             self.current_player = "O" if self.current_player == "X" else "X"
             return True
+        # If the move is invalid, return False
         return False
 
-    def available_moves(self):
-        """Returns a list of available moves as (row, col) tuples."""
-        return [(r, c) for r in range(3) for c in range(3) if self.board[r][c] == " "]
-
     def check_winner(self):
+        # Check rows and columns for a winner
         for i in range(3):
-            if self.board[i][0] == self.board[i][1] == self.board[i][2] != " " or \
-               self.board[0][i] == self.board[1][i] == self.board[2][i] != " ":
+            if (self.board[i][0] == self.board[i][1] == self.board[i][2] != " " or
+                self.board[0][i] == self.board[1][i] == self.board[2][i] != " "):
+                # Return the winning player's symbol
                 return self.board[i][i]
 
+        # Check diagonals for a winner
         if self.board[0][0] == self.board[1][1] == self.board[2][2] != " " or \
            self.board[0][2] == self.board[1][1] == self.board[2][0] != " ":
             return self.board[1][1]
 
+        # Check if the board is full (draw)
         if all(cell != " " for row in self.board for cell in row):
             return "Draw"
+
+        # If no winner and no draw, return None
         return None
 
-    def get_state(self):
-        """Returns the current state of the board as a 1D array."""
-        return np.array([1 if cell == "X" else -1 if cell == "O" else 0 for row in self.board for cell in row])
-
-# QAgent Class - RL Agent
-class QAgent:
-    def __init__(self, epsilon=0.1, alpha=0.5, gamma=0.9):
-        self.epsilon = epsilon  # Exploration rate
-        self.alpha = alpha  # Learning rate
-        self.gamma = gamma  # Discount factor
-        self.model = self.build_model()  # Q-network model for approximating Q-values
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-
-    def build_model(self):
-        """Build a simple neural network model to approximate Q-values."""
-        model = nn.Sequential(
-            nn.Linear(9, 128),  # 9 input features (3x3 board)
-            nn.ReLU(),
-            nn.Linear(128, 9)  # 9 output actions (one for each cell)
-        )
-        return model
-
-    def choose_action(self, game):
-        """Choose an action using epsilon-greedy policy."""
-        state = game.get_state()
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-
-        if random.random() < self.epsilon:  # Explore
-            available_moves = game.available_moves()
-            return random.choice(available_moves)
-        else:  # Exploit
-            q_values = self.model(state_tensor)
-            q_values = q_values.detach().numpy().flatten()
-            available_moves = game.available_moves()
-            move_values = [q_values[r * 3 + c] for r, c in available_moves]
-            best_move = available_moves[np.argmax(move_values)]
-            return best_move
-
-    def learn(self, state, action, reward, next_state, done):
-        """Update Q-values using the Q-learning update rule."""
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        next_state_tensor = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-
-        q_values = self.model(state_tensor)
-        next_q_values = self.model(next_state_tensor)
-
-        target = reward + self.gamma * torch.max(next_q_values) * (1 - int(done))
-        loss = nn.MSELoss()(q_values[0, action], target)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-# Training the Agent
-def train_agent(agent, num_episodes=1000):
-    for episode in range(num_episodes):
-        game = TicTacToe()
-        done = False
-        state = game.get_state()
-
-        while not done:
-            action = agent.choose_action(game)
-            row, col = action
-            game.make_move(row, col)
-
-            next_state = game.get_state()
-            winner = game.check_winner()
-
-            if winner == "X":
-                reward = 1
-                done = True
-            elif winner == "O":
-                reward = -1
-                done = True
-            elif winner == "Draw":
-                reward = 0
-                done = True
-            else:
-                reward = 0
-                done = False
-
-            agent.learn(state, row * 3 + col, reward, next_state, done)
-            state = next_state
-
-# Saving the trained model
-def save_model(agent, filename="tic_tac_toe_model.pth"):
-    torch.save(agent.model.state_dict(), filename)
-
-# Main Script to Train and Save Model
-if __name__ == "__main__":
-    agent = QAgent(epsilon=0.1, alpha=0.5, gamma=0.9)
-
-    # Train the agent to play against itself
-    print("Training the agent. This may take some time...")
-    train_agent(agent, num_episodes=5000)
-
-    # Save the trained model
-    print("Saving the trained model...")
-    save_model(agent)
-    print("Model saved successfully!")
-
-# TicTacToe Class - Game Environment
-class TicTacToe:
-    def __init__(self):
-        self.board = [[" "]*3 for _ in range(3)]
-        self.current_player = "X"
-
-    def print_board(self):
-        print("\n".join(["|" + "|".join(row) + "|" for row in self.board]))
-        print("-" * 9)
-
-    def reset(self):
-        """Resets the game board."""
-        self.board = [[" "]*3 for _ in range(3)]
-        self.current_player = "X"
-
-    def is_valid_move(self, row, col):
-        return self.board[row][col] == " "
-
-    def make_move(self, row, col):
-        if self.is_valid_move(row, col):
-            self.board[row][col] = self.current_player
-            self.current_player = "O" if self.current_player == "X" else "X"
-            return True
-        return False
-
-    def available_moves(self):
-        """Returns a list of available moves as (row, col) tuples."""
-        return [(r, c) for r in range(3) for c in range(3) if self.board[r][c] == " "]
-
-    def check_winner(self):
-        for i in range(3):
-            if self.board[i][0] == self.board[i][1] == self.board[i][2] != " " or \
-               self.board[0][i] == self.board[1][i] == self.board[2][i] != " ":
-                return self.board[i][i]
-
-        if self.board[0][0] == self.board[1][1] == self.board[2][2] != " " or \
-           self.board[0][2] == self.board[1][1] == self.board[2][0] != " ":
-            return self.board[1][1]
-
-        if all(cell != " " for row in self.board for cell in row):
-            return "Draw"
+    def get_winning_move(self, player):
+        # Check if the specified player can win in the next move
+        for row in range(3):
+            for col in range(3):
+                if self.is_valid_move(row, col):
+                    # Simulate the move
+                    self.board[row][col] = player
+                    # Check if this move results in a win
+                    if self.check_winner() == player:
+                        # Undo the move and return the winning position
+                        self.board[row][col] = " "
+                        return (row, col)
+                    # Undo the move if it doesn't result in a win
+                    self.board[row][col] = " "
+        # If no winning move is found, return None
         return None
 
-    def get_state(self):
-        """Returns the current state of the board as a 1D array."""
-        return np.array([1 if cell == "X" else -1 if cell == "O" else 0 for row in self.board for cell in row])
+    def count_available_lines(self, row, col):
+        # Count how many lines (rows, columns, diagonals) are still open for the given cell
+        count = 0
 
-# QAgent Class - RL Agent
-class QAgent:
-    def __init__(self, epsilon=0.1, alpha=0.5, gamma=0.9):
-        self.epsilon = epsilon  # Exploration rate
-        self.alpha = alpha  # Learning rate
-        self.gamma = gamma  # Discount factor
-        self.model = self.build_model()  # Q-network model for approximating Q-values
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        # Check the row
+        if self.board[row][0] == self.board[row][1] == self.board[row][2] == " ":
+            count += 1
 
-    def build_model(self):
-        """Build a simple neural network model to approximate Q-values."""
-        model = nn.Sequential(
-            nn.Linear(9, 128),  # 9 input features (3x3 board)
-            nn.ReLU(),
-            nn.Linear(128, 9)  # 9 output actions (one for each cell)
-        )
-        return model
+        # Check the column
+        if self.board[0][col] == self.board[1][col] == self.board[2][col] == " ":
+            count += 1
 
-    def load_model(self, filename="tic_tac_toe_model.pth"):
-        """Load a trained model from file."""
-        self.model.load_state_dict(torch.load(filename))
+        # Check the main diagonal (if the cell is on it)
+        if row == col and self.board[0][0] == self.board[1][1] == self.board[2][2] == " ":
+            count += 1
 
-    def choose_action(self, game):
-        """Choose an action using epsilon-greedy policy."""
-        state = game.get_state()
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        # Check the anti-diagonal (if the cell is on it)
+        if row + col == 2 and self.board[0][2] == self.board[1][1] == self.board[2][0] == " ":
+            count += 1
 
-        if random.random() < self.epsilon:  # Explore
-            available_moves = game.available_moves()
-            return random.choice(available_moves)
-        else:  # Exploit
-            q_values = self.model(state_tensor)
-            q_values = q_values.detach().numpy().flatten()
-            available_moves = game.available_moves()
-            move_values = [q_values[r * 3 + c] for r, c in available_moves]
-            best_move = available_moves[np.argmax(move_values)]
-            return best_move
+        return count
 
-# Function to play with the trained agent
-def play_with_agent(agent):
-    game = TicTacToe()
-    human_player = input("Do you want to play as 'X' or 'O'? ").upper()
+    def get_bot_move(self):
+        # First, check if the bot can win in the next move
+        winning_move = self.get_winning_move("O")
+        if winning_move:
+            return winning_move
 
-    # Validate human player input
-    if human_player not in ["X", "O"]:
-        print("Invalid input, defaulting to 'X'.")
-        human_player = "X"
+        # Then, check if the opponent can win in the next move and block them
+        opponent_winning_move = self.get_winning_move("X")
+        if opponent_winning_move:
+            return opponent_winning_move
 
-    print("\nYou can now play against the trained agent!")
+        # If no immediate win or block, find all available moves
+        available_moves = [(r, c) for r in range(3) for c in range(3) if self.is_valid_move(r, c)]
 
-    # Main game loop
-    while True:
-        game.print_board()
-        winner = game.check_winner()
+        # Score each available move based on how many lines it opens
+        move_scores = []
+        for move in available_moves:
+            row, col = move
+            score = self.count_available_lines(row, col)
+            move_scores.append((move, score))
 
-        if winner:
-            if winner == "Draw":
-                print("It's a draw!")
-            else:
-                print(f"Player {winner} wins!")
-            break
+        # Find the move(s) with the highest score
+        max_score = max(move_scores, key=lambda x: x[1])[1]
+        best_moves = [move for move, score in move_scores if score == max_score]
 
-        # Player's turn
-        if game.current_player == human_player:
-            print(f"Your turn (Player {human_player})!")
-            try:
-                row, col = map(int, input("Enter row and column (0 1 2): ").split())
-                if not game.make_move(row, col):
-                    print("Invalid move. Try again.")
+        # Randomly choose one of the best moves
+        return random.choice(best_moves) if best_moves else None
+
+    def play(self):
+        print("Welcome to Tic Tac Toe!")
+        while True:
+            # Print the current state of the board
+            self.print_board()
+            print(f"Player {self.current_player}'s turn.")
+
+            if self.current_player == "X":
+                # Human player's turn
+                try:
+                    # Get the row and column from the player
+                    row, col = map(int, input("Enter row and column (0 1 2): ").split())
+                    # Make the move if it's valid, otherwise prompt again
+                    if not self.make_move(row, col):
+                        print("Invalid move, try again.")
+                        continue
+                except (ValueError, IndexError):
+                    # Handle invalid input
+                    print("Invalid input! Please enter valid row and column.")
                     continue
-            except ValueError:
-                print("Invalid input. Please enter row and column as two integers (0 1 2).")
-                continue
-        else:
-            # Agent's turn
-            print(f"Agent's turn (Player {game.current_player})!")
-            row, col = agent.choose_action(game)
-            game.make_move(row, col)
+            else:
+                # Bot's turn
+                print("Bot's turn...")
+                row, col = self.get_bot_move()
+                self.make_move(row, col)
+                print(f"Bot chooses position ({row}, {col})")
 
-# Main Script to Load and Play
+            # Check if the game has ended (win or draw)
+            winner = self.check_winner()
+            if winner:
+                self.print_board()
+                print(f"{'Draw' if winner == 'Draw' else f'Player {winner} wins!'}")
+                break
+
+# Start the game if this script is run directly
 if __name__ == "__main__":
-    agent = QAgent(epsilon=0.1, alpha=0.5, gamma=0.9)
-
-    # Load the trained model
-    print("Loading the trained model...")
-    agent.load_model("tic_tac_toe_model.pth")
-
-    # Play with the trained agent
-    play_with_agent(agent)
-
+    TicTacToe().play()
