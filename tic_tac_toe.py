@@ -2,21 +2,17 @@ import random
 
 class TicTacToe:
     def __init__(self):
-        # Initialize the game board as a 3x3 grid with empty spaces
-        self.board = [[" "] * 3 for _ in range(3)]
-        # Start with player "X"
-        self.current_player = "X"
+        self.board = [[" "] * 3 for _ in range(3)] # Initialize the game board as a 3x3 grid with empty spaces
+        self.current_player = "X" # Start with player "X"
 
     def print_board(self):
-        # Print the column numbers at the top
-        print("  0 1 2")
+        print("  0 1 2") # Print the column numbers at the top
         # Loop through each row and print the row number followed by the row content
         for i, row in enumerate(self.board):
             print(f"{i} " + "|".join(row))
 
     def is_valid_move(self, row, col):
-        # Check if the specified cell is empty
-        return self.board[row][col] == " "
+        return self.board[row][col] == " " # Check if the specified cell is empty
 
     def make_move(self, row, col):
         # If the move is valid, place the current player's symbol on the board
@@ -25,8 +21,7 @@ class TicTacToe:
             # Switch the current player to the other player
             self.current_player = "O" if self.current_player == "X" else "X"
             return True
-        # If the move is invalid, return False
-        return False
+        return False # If the move is invalid, return False
 
     def check_winner(self):
         # Check rows and columns for a winner
@@ -42,19 +37,16 @@ class TicTacToe:
             return self.board[1][1]
 
         # Check if the board is full (draw)
-        if all(cell != " " for row in self.board for cell in row):
-            return "Draw"
+        if all(cell != " " for row in self.board for cell in row): return "Draw"
 
-        # If no winner and no draw, return None
-        return None
+        return None # If no winner and no draw, return None
 
     def get_winning_move(self, player):
         # Check if the specified player can win in the next move
         for row in range(3):
             for col in range(3):
                 if self.is_valid_move(row, col):
-                    # Simulate the move
-                    self.board[row][col] = player
+                    self.board[row][col] = player # Simulate the move
                     # Check if this move results in a win
                     if self.check_winner() == player:
                         # Undo the move and return the winning position
@@ -62,12 +54,10 @@ class TicTacToe:
                         return (row, col)
                     # Undo the move if it doesn't result in a win
                     self.board[row][col] = " "
-        # If no winning move is found, return None
-        return None
+        return None # If no winning move is found, return None
 
     def count_available_lines(self, row, col):
-        # Count how many lines (rows, columns, diagonals) are still open for the given cell
-        count = 0
+        count = 0 # Count how many lines (rows, columns, diagonals) are still open for the given cell
 
         # Check the row
         if self.board[row][0] == self.board[row][1] == self.board[row][2] == " ":
@@ -90,13 +80,11 @@ class TicTacToe:
     def get_bot_move(self):
         # First, check if the bot can win in the next move
         winning_move = self.get_winning_move("O")
-        if winning_move:
-            return winning_move
+        if winning_move: return winning_move
 
         # Then, check if the opponent can win in the next move and block them
         opponent_winning_move = self.get_winning_move("X")
-        if opponent_winning_move:
-            return opponent_winning_move
+        if opponent_winning_move: return opponent_winning_move
 
         # If no immediate win or block, find all available moves
         available_moves = [(r, c) for r in range(3) for c in range(3) if self.is_valid_move(r, c)]
@@ -136,7 +124,6 @@ class TicTacToe:
                     print("Invalid input! Please enter valid row and column.")
                     continue
             else:
-                # Bot's turn
                 print("Bot's turn...")
                 row, col = self.get_bot_move()
                 self.make_move(row, col)
@@ -149,6 +136,5 @@ class TicTacToe:
                 print(f"{'Draw' if winner == 'Draw' else f'Player {winner} wins!'}")
                 break
 
-# Start the game if this script is run directly
 if __name__ == "__main__":
     TicTacToe().play()
