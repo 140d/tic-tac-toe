@@ -1,4 +1,4 @@
-# Tic Tac Toe Game
+# Tic Tac Toe
 
 This is a Python implementation of a simple Tic Tac Toe game, where a player can play against a bot. The bot employs an intelligent strategy to make moves, including blocking the opponent and taking the most favorable available move. The game is played on a 3x3 grid, and the player alternates with the bot, starting with player "X."
 
