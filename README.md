@@ -20,7 +20,7 @@ This is a Python implementation of a simple Tic Tac Toe game, where a player can
 
 To run the Tic Tac Toe game, follow these steps:
 
-1. **Clone the repository** or download the `tictactoe.py` file.
+1. **Clone the repository** or download the `tic_tac_toe.py` file.
 2. **Run the game** using Python 3:
 
 ```bash
